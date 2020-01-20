@@ -22,6 +22,8 @@ import { KeyringPair } from "@polkadot/keyring/types";
 import { Option } from "@polkadot/types";
 import { Address, ContractInfo, Hash } from "@polkadot/types/interfaces";
 
+import { Abi } from '@polkadot/api-contract';
+
 import { ALICE, CREATION_FEE, WSURL } from "./consts";
 import {
   callContract,
@@ -35,6 +37,7 @@ const keyring = testKeyring({ type: "sr25519" });
 const alicePair = keyring.getPair(ALICE);
 let testAccount: KeyringPair;
 let api: ApiPromise;
+let metadata: Abi;
 
 beforeAll((): void => {
   jest.setTimeout(30000);
@@ -44,7 +47,7 @@ beforeEach(
   async (done): Promise<() => void> => {
     api = await ApiPromise.create({ provider: new WsProvider(WSURL) });
     testAccount = keyring.addFromSeed(randomAsU8a(32));
-
+    
     return api.tx.balances
       .transfer(testAccount.address, CREATION_FEE.muln(3))
       .signAndSend(alicePair, (result: SubmittableResult): void => {
@@ -60,9 +63,11 @@ beforeEach(
 );
 
 describe("Rust Smart Contracts", () => {
-  // Currently broken, needs fixing after ink! 2.0 update
   test("Flip contract", async (done): Promise<void> => {
     const meta = require("../lib/ink/examples/lang2/flipper/target/metadata.json");
+    metadata = new Abi(api.registry, meta);
+    console.log('metadata', metadata.messages)
+    console.log('metadata', metadata.constructors)
 
     // The storage key `0x0000000000000000000000000000000000000000000000000000000000000000` is copied over from the generated ink! contract metadata
     const STORAGE_KEY = (new Uint8Array(32)).fill(0);
